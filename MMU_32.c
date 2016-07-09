@@ -126,7 +126,7 @@ struct processo {
 	int            total_tempo_ret; // marca tempo de retorno do processo no momento da execucao do processo: tempo corrente da cpu acrescido do tempo de ingresso na fila
 	int            tingresso;       // marca tempo que ingressou na fila
 
-	vtab_t         enderecos[LEN_MEMO_PROC];
+	uint32_t       lvaddr[LEN_MEMO_PROC];
 };
 typedef struct processo processo_t;
 
@@ -227,6 +227,9 @@ void imprime_processo(processo_t proc) {
 		proc.tingresso );
 }
 
+void acessando_enderecos(processo_t proc){
+
+}
 // roleta ... para gerar um evento, dada uma probabilidade x.
 int prob(float x){
 	float p;
@@ -271,6 +274,8 @@ void executa_processo(processo_t *proc) {
 	proc->ttotal_exec = sub(proc->ttotal_exec, proc->texec);    // atuzliza tempo do processo
 	proc->total_tempo_ret = total_tempo_cpu + proc->tingresso;  // marca tempo de retorno corrente do processo
 	imprime_processo(*proc);
+
+	acessando_enderecos(*proc);                                 //Acessa endereços de memoria desse processo
 }
 
 void escalonador(fila_t *f) {
