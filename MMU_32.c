@@ -6,6 +6,7 @@
 
 #define TRUE 1
 #define FALSE 0
+#define LEN_ADR 16
 
 struct virtual_page_t{ // Pagina virtual
     uint32_t cache:1;
@@ -93,7 +94,7 @@ int get_frame_NUR(age_t at[]){
     return imin;
 }
 
-/*################/* PARTE DE PROCESSOS /* ###################### */
+/////////////////////* PARTE DE PROCESSOS /* ///////////////////////// */
 #define F 0
 #define V 1
 #define MIN(a, b) a<b?a:b
@@ -126,7 +127,7 @@ struct processo {
 	int            total_tempo_ret; // marca tempo de retorno do processo no momento da execucao do processo: tempo corrente da cpu acrescido do tempo de ingresso na fila
 	int            tingresso;       // marca tempo que ingressou na fila
 
-	uint32_t       lvaddr[LEN_MEMO_PROC];
+	uint32_t       lvaddr[LEN_ADR];
 };
 typedef struct processo processo_t;
 
@@ -228,7 +229,7 @@ void imprime_processo(processo_t proc) {
 }
 
 void acessando_enderecos(processo_t proc){
-
+    printf("SAINDO acessando_end\n");
 }
 // roleta ... para gerar um evento, dada uma probabilidade x.
 int prob(float x){
@@ -275,7 +276,8 @@ void executa_processo(processo_t *proc) {
 	proc->total_tempo_ret = total_tempo_cpu + proc->tingresso;  // marca tempo de retorno corrente do processo
 	imprime_processo(*proc);
 
-	acessando_enderecos(*proc);                                 //Acessa endereços de memoria desse processo
+	acessando_enderecos(*proc);                                 //Acessa endereços de memoria desse process
+	printf("executa processo\n");
 }
 
 void escalonador(fila_t *f) {
@@ -327,6 +329,13 @@ float get_quantum(unsigned int prio) {
 	return q;
 }
 
+
+void inicializa_enderecos(processo_t *proc){
+    int i = 0;
+    for(i = 0; i < LEN_ADR; i++)
+        proc->lvaddr[i] = i;
+}
+
 processo_t cria_processo(unsigned short pid){
 	processo_t proc;
 	proc.pid = pid;
@@ -342,6 +351,9 @@ processo_t cria_processo(unsigned short pid){
         proc.total_io = 0;
         proc.total_tempo_ret = 0;
 	proc.tingresso = total_tempo_cpu;
+
+	inicializa_enderecos(&proc);
+
 	return proc;
 }
 
@@ -360,6 +372,7 @@ void cria_todos_processos(fila_t *f, int np) {
 		insere_fila_prio(f, proc);
 	}
 }
+
 
 int main(){
 
