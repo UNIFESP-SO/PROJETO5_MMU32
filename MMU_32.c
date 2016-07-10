@@ -277,7 +277,6 @@ void executa_processo(processo_t *proc) {
 	imprime_processo(*proc);
 
 	acessando_enderecos(*proc);                                 //Acessa endereços de memoria desse process
-	printf("executa processo\n");
 }
 
 void escalonador(fila_t *f) {
@@ -333,7 +332,7 @@ float get_quantum(unsigned int prio) {
 void inicializa_enderecos(processo_t *proc){
     int i = 0;
     for(i = 0; i < LEN_ADR; i++)
-        proc->lvaddr[i] = i;
+        proc->lvaddr[i] = rand()%VTAB_LEN*VTAB_LEN;
 }
 
 processo_t cria_processo(unsigned short pid){
