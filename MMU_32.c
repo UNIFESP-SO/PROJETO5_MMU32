@@ -369,13 +369,15 @@ void cria_todos_processos(fila_t *f, int np) {
 	processo_t proc;
 	for (i=0; i<np; i++) {
 		proc = cria_processo(i);
+		imprime_processo(proc);
 		insere_fila_prio(f, proc);
 	}
 }
 
 
 int main(){
-
+    fila_t * fila;
+    cria_fila(&fila);
+    cria_todos_processos(&fila, 5);
+    escalonador(&fila);
 }
-
-
