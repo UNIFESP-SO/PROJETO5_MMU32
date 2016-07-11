@@ -375,8 +375,5 @@ void cria_todos_processos(fila_t *f, int np) {
 
 
 int main(){
-    fila_t * fila;
-    cria_fila(&fila);
-    cria_todos_processos(&fila, 5);
-    escalonador(&fila);
+
 }
