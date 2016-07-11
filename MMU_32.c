@@ -20,7 +20,7 @@ struct virtual_page_t{ // Pagina virtual
 };
 typedef struct virtual_page_t vtab_t;
 
-#define VTAB_LEN 2048
+#define VTAB_LEN 128
 #define LEN_ADR VTAB_LEN/3
 
 vtab_t virtual_mem[VTAB_LEN][VTAB_LEN];
@@ -64,6 +64,7 @@ struct age_t {
     uint16_t l2;    // tab nivel 2
 };
 typedef struct age_t age_t;
+age_t vet_envelhecimento[VTAB_LEN*VTAB_LEN];
 
 void aging(age_t at[], vtab_t vt[][VTAB_LEN]){
     int i, j;
@@ -256,12 +257,16 @@ void acessando_enderecos(processo_t proc){
     int i = 0;
     uint32_t *faddr[LEN_ADR];
 
-    if(get_frame_addr(proc.lvaddr[i], faddr[i], virtual_mem) == R_TRAP){
-        // TRATAR FALTA DE PAGINA
-    }
-    else{
-        // ACESSAR ENDEREÇO FISICO OBTIDO em faddr[LEN_ADR]
-        printf("PROC %d -> ACESSANDO %d\n", proc.pid, (*faddr[i]));
+    for(i = 0; i < LEN_ADR; i++) {
+        if(get_frame_addr(proc.lvaddr[i], faddr[i], virtual_mem) == R_TRAP){
+            // TRATAR FALTA DE PAGINA
+            printf("Tratar falta de pagina para o endereco %d\n", proc.lvaddr[i]);
+        }
+        else{
+            // ACESSAR ENDEREÇO FISICO OBTIDO em faddr[LEN_ADR]
+            printf("PROC %d -> ACESSANDO %d\n", proc.pid, (*faddr[i]));
+        }
+        aging(vet_envelhecimento, virtual_mem);
     }
 }
 
