@@ -3,10 +3,11 @@
 #include <strings.h>
 #include <string.h>
 #include <inttypes.h>
+#include <time.h>
 
 #define TRUE 1
 #define FALSE 0
-#define LEN_ADR 16
+
 
 struct virtual_page_t{ // Pagina virtual
     uint32_t cache:1;
@@ -19,7 +20,9 @@ struct virtual_page_t{ // Pagina virtual
 };
 typedef struct virtual_page_t vtab_t;
 
-#define VTAB_LEN 16
+#define VTAB_LEN 2048
+#define LEN_ADR VTAB_LEN/3
+
 vtab_t virtual_mem[VTAB_LEN][VTAB_LEN];
 
 struct vaddr{
@@ -228,9 +231,7 @@ void imprime_processo(processo_t proc) {
 		proc.tingresso );
 }
 
-void acessando_enderecos(processo_t proc){
-    printf("SAINDO acessando_end\n");
-}
+
 // roleta ... para gerar um evento, dada uma probabilidade x.
 int prob(float x){
 	float p;
@@ -251,6 +252,18 @@ int sub(int a, int b) {
 	return r;
 }
 
+void acessando_enderecos(processo_t proc){
+    int i = 0;
+    uint32_t *faddr[LEN_ADR];
+
+    if(get_frame_addr(proc.lvaddr[i], faddr[i], virtual_mem) == R_TRAP){
+        // TRATAR FALTA DE PAGINA
+    }
+    else{
+        // ACESSAR ENDEREÇO FISICO OBTIDO em faddr[LEN_ADR]
+        printf("PROC %d -> ACESSANDO %d\n", proc.pid, (*faddr[i]));
+    }
+}
 
 void executa_processo(processo_t *proc) {
 	// preempcao
@@ -331,8 +344,10 @@ float get_quantum(unsigned int prio) {
 
 void inicializa_enderecos(processo_t *proc){
     int i = 0;
-    for(i = 0; i < LEN_ADR; i++)
-        proc->lvaddr[i] = rand()%VTAB_LEN*VTAB_LEN;
+    for(i = 0; i < LEN_ADR; i++){
+        proc->lvaddr[i] = rand()%(VTAB_LEN*VTAB_LEN);
+        printf("Proc %d\nEndereço %d\n", proc->pid, proc->lvaddr[i]);
+    }
 }
 
 processo_t cria_processo(unsigned short pid){
@@ -373,7 +388,26 @@ void cria_todos_processos(fila_t *f, int np) {
 	}
 }
 
-
-int main(){
-
+int main(int argc, char *argv[]){
+	if (argc != 2) {
+		printf("uso: %s <num_proc>\n", argv[0]);
+		return 0;
+	}
+	int np;
+	srand(time(NULL));
+	fila_t f;
+	np = atoi(argv[1]);
+	cria_fila(&f);
+	cria_todos_processos(&f, np);
+	   /*
+	         Todos os np processos estao sendo criados no mesmo instante (tingresso = total_tempo_cpu = 0).
+	      Portanto, a media do tempo de retorno sera sempre a soma de todos os ttotal_exec dos processos
+	      dividida por np.
+	        Obs.: para verificar diferentes tempos de retorno, os processos precisam chegar
+	      na fila em diferentes momentos (ou seja, o tingresso nao pode ser o mesmo para todos).
+	      Nesse caso, um nova funcao cria_todos_processo() deve inserir os processos na fila
+              com diferentes tempos de tingresso.
+	   */
+	escalonador(&f);
+	return 0;
 }
