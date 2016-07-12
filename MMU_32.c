@@ -7,7 +7,16 @@
 
 #define TRUE 1
 #define FALSE 0
+#define F 0
+#define V 1
+#define MIN(a, b) a<b?a:b
 
+int prob(float x){
+	float p;
+	p = ((float)(rand()%101))/100.0;
+	if (p <= x) return V;
+	return F;
+}
 
 struct virtual_page_t{ // Pagina virtual
     uint32_t cache:1;
@@ -22,8 +31,6 @@ typedef struct virtual_page_t vtab_t;
 
 #define VTAB_LEN 128
 #define LEN_ADR VTAB_LEN/3
-
-vtab_t virtual_mem[VTAB_LEN][VTAB_LEN];
 
 struct vaddr{
     uint32_t pt1:10;
@@ -44,6 +51,9 @@ vaddr_t get_virtual_addr(uint32_t lvaddr){
     return (va);
 }
 
+void zera_vmem(vtab_t vm[][VTAB_LEN]) {
+	memset(vm, 0, VTAB_LEN * VTAB_LEN * sizeof(vtab_t));
+}
 #define R_TRAP -1
 #define R_OK    0
 
@@ -64,7 +74,12 @@ struct age_t {
     uint16_t l2;    // tab nivel 2
 };
 typedef struct age_t age_t;
-age_t vet_envelhecimento[VTAB_LEN*VTAB_LEN];
+
+#define FRAME_NUM 524288
+
+void zera_agetab(age_t at[]) {
+	memset(at, 0, FRAME_NUM * sizeof(age_t));
+}
 
 void aging(age_t at[], vtab_t vt[][VTAB_LEN]){
     int i, j;
@@ -80,7 +95,9 @@ void aging(age_t at[], vtab_t vt[][VTAB_LEN]){
     }
 }
 
-#define FRAME_NUM 524288    //  2^19
+age_t vet_envelhecimento[FRAME_NUM];
+vtab_t virtual_mem[VTAB_LEN][VTAB_LEN];
+
 // NUR -> NOT UTILIZED RECENTLY
 int get_frame_NUR(age_t at[]){
     int i, imin = -1;
@@ -98,10 +115,26 @@ int get_frame_NUR(age_t at[]){
     return imin;
 }
 
+int get_frame_NUF (age_t at[]) { // algoritmo de substituicao: NUF/Aging nao utilizado frequentemente
+	int i, imin;
+	int min = 256; //maior valor possivel para um byte + 1
+	for (i=0; i<FRAME_NUM; i++) {
+		if (!at[i].alloc) return i;
+		if (at[i].alloc) {
+			if (at[i].age < min) {
+				min = at[i].age;
+				imin = i;
+			}
+		}
+	}
+	return imin;
+}
+
+void remove_page(vtab_t vt[][VTAB_LEN], int l1, int l2, age_t at[]) {
+	memset(&at[vt[l1][l2].frame], 0, sizeof(age_t));
+	memset(&vt[l1][l2], 0, sizeof(vtab_t));
+}
 /////////////////////* PARTE DE PROCESSOS /* ///////////////////////// */
-#define F 0
-#define V 1
-#define MIN(a, b) a<b?a:b
 
 // estados
 #define EXECUTANDO 0
@@ -234,12 +267,6 @@ void imprime_processo(processo_t proc) {
 
 
 // roleta ... para gerar um evento, dada uma probabilidade x.
-int prob(float x){
-	float p;
-	p = ((float)(rand()%101))/100.0;
-	if (p <= x) return V;
-	return F;
-}
 
 // obtem tempo aleatorio <= x
 int pega_tempo (int x) {
@@ -253,20 +280,37 @@ int sub(int a, int b) {
 	return r;
 }
 
+// AO EXECUTAR PROCESSO ELE INICIA ACESSO AOS ENDEREÇOS QUE FORAM INICIALIZADOS COMO FAZENDO PARTE DESSE PROCESSO
 void acessando_enderecos(processo_t proc){
     int i = 0;
-    uint32_t *faddr[LEN_ADR];
+    uint32_t *faddr[FRAME_NUM];
+    // va È USADO PARA ACESSAR O ENDEREÇO VIRTUAL REFERENTE AO ENDEREÇO LINEAR faddr[i]
+    vaddr_t va = get_virtual_addr(proc.lvaddr[i]);
 
-    for(i = 0; i < LEN_ADR; i++) {
+    // PARA CADA ENDEREÇO CONTIDO NESSE PROCESSO ELE VERIFICA SE O ENDEREÇO JA ESTA MAPEADO E TRATA CADA SITUAÇÂO
+    for(i = 0; i < FRAME_NUM; i++) {
         if(get_frame_addr(proc.lvaddr[i], faddr[i], virtual_mem) == R_TRAP){
             // TRATAR FALTA DE PAGINA
+
+            // REMOVE PAGINA DA MEMORIA SEGUNDO AGING
+
+            // INSERE PAGINA Q LANÇOU TRAP
             printf("Tratar falta de pagina para o endereco %d\n", proc.lvaddr[i]);
         }
         else{
             // ACESSAR ENDEREÇO FISICO OBTIDO em faddr[LEN_ADR]
+
+            // COMO O ENDEREÇO ESTA SENDO ACESSADO ELE É REFERENCIADO
+            virtual_mem[va.pt1][va.pt2].ref = TRUE;
+
+            // PROBABILIDADE DE ESSE ENDEREÇO SER MODIFICADO
+            if (prob(0.2)) virtual_mem[va.pt1][va.pt2].modif = TRUE; // modificada
+			else virtual_mem[va.pt1][va.pt2].modif = FALSE;
+
             printf("PROC %d -> ACESSANDO %d\n", proc.pid, (*faddr[i]));
         }
-        aging(vet_envelhecimento, virtual_mem);
+        if(!(i % 5))    // A CADA 5 ENDEREÇOS ACESSADOS, ENVELHECE VMEM
+            aging(vet_envelhecimento, virtual_mem);
     }
 }
 
@@ -392,6 +436,8 @@ void cria_todos_processos(fila_t *f, int np) {
 		insere_fila_prio(f, proc);
 	}
 }
+
+
 
 int main(int argc, char *argv[]){
 	if (argc != 2) {
