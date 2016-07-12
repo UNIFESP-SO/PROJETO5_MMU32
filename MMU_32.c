@@ -404,7 +404,7 @@ void inicializa_enderecos(processo_t *proc){
 
         // Inicializando Memoria Virtual
         virtual_mem[va.pt1][va.pt2].frame = frames;
-        frames++;
+        if(frames < (VTAB_LEN*VTAB_LEN)) frames++;
 
         printf("Inicializando endereço %d como parte do processo %d\n", proc->lvaddr[i], proc->pid);
     }
@@ -451,16 +451,16 @@ void cria_todos_processos(fila_t *f, int np) {
 
 
 int main(int argc, char *argv[]){
-	if (argc != 2) {
+	/*if (argc != 2) {
 		printf("uso: %s <num_proc>\n", argv[0]);
 		return 0;
-	}
+	}*/
 	int np;
 	srand(time(NULL));
 	zera_agetab(vet_envelhecimento);
 	zera_vmem(virtual_mem);
 	fila_t f;
-	np = atoi(argv[1]);
+	np = 3;
 	cria_fila(&f);
 	cria_todos_processos(&f, np);
 	   /*
