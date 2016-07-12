@@ -29,7 +29,7 @@ struct virtual_page_t{ // Pagina virtual
 };
 typedef struct virtual_page_t vtab_t;
 
-#define VTAB_LEN 128
+#define VTAB_LEN 1024
 #define LEN_ADR VTAB_LEN/3
 
 struct vaddr{
@@ -97,6 +97,7 @@ void aging(age_t at[], vtab_t vt[][VTAB_LEN]){
 
 age_t vet_envelhecimento[FRAME_NUM];
 vtab_t virtual_mem[VTAB_LEN][VTAB_LEN];
+int frames = 0;
 
 // NUR -> NOT UTILIZED RECENTLY
 int get_frame_NUR(age_t at[]){
@@ -283,12 +284,12 @@ int sub(int a, int b) {
 // AO EXECUTAR PROCESSO ELE INICIA ACESSO AOS ENDEREÇOS QUE FORAM INICIALIZADOS COMO FAZENDO PARTE DESSE PROCESSO
 void acessando_enderecos(processo_t proc){
     int i = 0;
-    uint32_t *faddr[FRAME_NUM];
+    uint32_t *faddr[LEN_ADR];
     // va È USADO PARA ACESSAR O ENDEREÇO VIRTUAL REFERENTE AO ENDEREÇO LINEAR faddr[i]
     vaddr_t va = get_virtual_addr(proc.lvaddr[i]);
 
     // PARA CADA ENDEREÇO CONTIDO NESSE PROCESSO ELE VERIFICA SE O ENDEREÇO JA ESTA MAPEADO E TRATA CADA SITUAÇÂO
-    for(i = 0; i < FRAME_NUM; i++) {
+    for(i = 0; i < LEN_ADR; i++) {
         if(get_frame_addr(proc.lvaddr[i], faddr[i], virtual_mem) == R_TRAP){
             // TRATAR FALTA DE PAGINA
 
@@ -299,7 +300,7 @@ void acessando_enderecos(processo_t proc){
         }
         else{
             // ACESSAR ENDEREÇO FISICO OBTIDO em faddr[LEN_ADR]
-
+            printf("Acessando endereço fisico %d\n", *faddr[i]);
             // COMO O ENDEREÇO ESTA SENDO ACESSADO ELE É REFERENCIADO
             virtual_mem[va.pt1][va.pt2].ref = TRUE;
 
@@ -309,8 +310,10 @@ void acessando_enderecos(processo_t proc){
 
             printf("PROC %d -> ACESSANDO %d\n", proc.pid, (*faddr[i]));
         }
-        if(!(i % 5))    // A CADA 5 ENDEREÇOS ACESSADOS, ENVELHECE VMEM
+        if(!(i % 5)){    // A CADA 5 ENDEREÇOS ACESSADOS, ENVELHECE VMEM
+            //printf("Envelhecendo\n");
             aging(vet_envelhecimento, virtual_mem);
+        }
     }
 }
 
@@ -336,7 +339,7 @@ void executa_processo(processo_t *proc) {
 	total_tempo_cpu += MIN(proc->ttotal_exec, proc->texec);     // atualiza tempo da cpu
 	proc->ttotal_exec = sub(proc->ttotal_exec, proc->texec);    // atuzliza tempo do processo
 	proc->total_tempo_ret = total_tempo_cpu + proc->tingresso;  // marca tempo de retorno corrente do processo
-	imprime_processo(*proc);
+	//imprime_processo(*proc);
 
 	acessando_enderecos(*proc);                                 //Acessa endereços de memoria desse process
 }
@@ -393,9 +396,17 @@ float get_quantum(unsigned int prio) {
 
 void inicializa_enderecos(processo_t *proc){
     int i = 0;
+    vaddr_t va;
     for(i = 0; i < LEN_ADR; i++){
+        // Processos são inicializados com endereços fixos de forma aleatoria
         proc->lvaddr[i] = rand()%(VTAB_LEN*VTAB_LEN);
-        printf("Proc %d\nEndereço %d\n", proc->pid, proc->lvaddr[i]);
+        va = get_virtual_addr(proc->lvaddr[i]);
+
+        // Inicializando Memoria Virtual
+        virtual_mem[va.pt1][va.pt2].frame = frames;
+        frames++;
+
+        printf("Inicializando endereço %d como parte do processo %d\n", proc->lvaddr[i], proc->pid);
     }
 }
 
@@ -446,6 +457,8 @@ int main(int argc, char *argv[]){
 	}
 	int np;
 	srand(time(NULL));
+	zera_agetab(vet_envelhecimento);
+	zera_vmem(virtual_mem);
 	fila_t f;
 	np = atoi(argv[1]);
 	cria_fila(&f);
