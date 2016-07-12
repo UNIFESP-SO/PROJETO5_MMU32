@@ -98,6 +98,7 @@ void aging(age_t at[], vtab_t vt[][VTAB_LEN]){
 age_t vet_envelhecimento[FRAME_NUM];
 vtab_t virtual_mem[VTAB_LEN][VTAB_LEN];
 int frames = 0;
+int fisical_frames = 0;
 
 // NUR -> NOT UTILIZED RECENTLY
 int get_frame_NUR(age_t at[]){
@@ -292,15 +293,23 @@ void acessando_enderecos(processo_t proc){
     for(i = 0; i < LEN_ADR; i++) {
         if(get_frame_addr(proc.lvaddr[i], faddr[i], virtual_mem) == R_TRAP){
             // TRATAR FALTA DE PAGINA
-
-            // REMOVE PAGINA DA MEMORIA SEGUNDO AGING
-
-            // INSERE PAGINA Q LANÇOU TRAP
             printf("Tratar falta de pagina para o endereco %d\n", proc.lvaddr[i]);
+            if(fisical_frames < FRAME_NUM){
+                virtual_mem[va.pt1][va.pt2].exist = TRUE;
+                virtual_mem[va.pt1][va.pt2].ref = TRUE;
+                fisical_frames++;
+                printf("PROC %d -> ACESSANDO %d apos R_TRAP\n", proc.pid, (*faddr[i]));
+            }
+            else{ // FALTA DE PAGINA COM MEMORIA CHEIA
+            /* Aqui eu deveria encontrar o endereço a ser removido, via NUR ou NUF
+            Remover esse endereço, alocando-o novamente ao disco e inserir o endereço que
+            que retornou falta de pagina em seu lugar
+            */
+
+            }
         }
         else{
             // ACESSAR ENDEREÇO FISICO OBTIDO em faddr[LEN_ADR]
-            printf("Acessando endereço fisico %d\n", *faddr[i]);
             // COMO O ENDEREÇO ESTA SENDO ACESSADO ELE É REFERENCIADO
             virtual_mem[va.pt1][va.pt2].ref = TRUE;
 
